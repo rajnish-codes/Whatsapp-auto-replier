@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import httpx
 import os
 from supabase import create_client
-
+from datetime import datetime
+import uuid
 # Load environment variables FIRST
 load_dotenv()
 
@@ -62,11 +63,28 @@ async def whatsapp_webhook(request: Request):
     else:
         reply = "Sorry, I couldn't generate a reply. Please try again."
 
-    # Save to Supabase table
+   
+    session_id = str(uuid.uuid4()),
+
    
     supabase.table("messages").insert({
+        
         "user_msg": user_msg,
-        "ai_reply": reply
+        "ai_reply":"",
+        "message_type": "user_msg",
+        "session_id": session_id,
+        "status": "sent",
+        "is_error": False
+     }).execute()
+    
+    supabase.table("messages").insert({
+        
+        "user_msg": "",
+        "ai_reply":reply,
+        "message_type": "user_msg",
+        "session_id": session_id,
+        "status": "sent",
+        "is_error": False
      }).execute()
    
    
