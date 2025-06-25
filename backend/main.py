@@ -6,6 +6,8 @@ import os
 from supabase import create_client
 from datetime import datetime
 import uuid
+
+session_id = str(uuid.uuid4()),
 # Load environment variables FIRST
 load_dotenv()
 
@@ -64,7 +66,7 @@ async def whatsapp_webhook(request: Request):
         reply = "Sorry, I couldn't generate a reply. Please try again."
 
    
-    session_id = str(uuid.uuid4()),
+   
 
    
     supabase.table("messages").insert({
