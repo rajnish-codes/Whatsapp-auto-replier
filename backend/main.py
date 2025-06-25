@@ -73,7 +73,7 @@ async def whatsapp_webhook(request: Request):
         
         "user_msg": user_msg,
         "ai_reply":"",
-        "message_type": "user_msg",
+        "message_type": "user",
         "session_id": session_id,
         "status": "sent",
         "is_error": False
@@ -83,7 +83,7 @@ async def whatsapp_webhook(request: Request):
         
         "user_msg": "",
         "ai_reply":reply,
-        "message_type": "user_msg",
+        "message_type": "bot",
         "session_id": session_id,
         "status": "sent",
         "is_error": False
