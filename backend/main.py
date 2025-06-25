@@ -7,8 +7,7 @@ from supabase import create_client
 from datetime import datetime
 import uuid
 
-session_id = str(uuid.uuid4()),
-# Load environment variables FIRST
+# ========== ENV LOAD ==========
 load_dotenv()
 
 # ========== ENV VARIABLES ==========
@@ -20,12 +19,13 @@ twilio_to = os.getenv("MY_PHONE")            # e.g., whatsapp:+91xxxxxxxxxx
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-# ========== INIT CLIENTS ==========
+# ========== CLIENT INIT ==========
 twilio_client = Client(twilio_sid, twilio_token)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ========== FASTAPI APP ==========
+# ========== APP INIT ==========
 app = FastAPI()
+
 
 @app.get("/")
 def root():
@@ -37,10 +37,9 @@ async def whatsapp_webhook(request: Request):
     form = await request.form()
     user_msg = form.get("Body")
 
-    # Call Groq API
-    timeout_config = httpx.Timeout(10.0, connect=5.0)  # 10 seconds read, 5 seconds connect
+    # === Step 1: Call Groq API ===
+    timeout_config = httpx.Timeout(10.0, connect=5.0)
     async with httpx.AsyncClient(timeout=timeout_config) as client:
-
         groq_response = await client.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
@@ -59,23 +58,14 @@ async def whatsapp_webhook(request: Request):
     groq_json = groq_response.json()
     print("Groq Full Response:", groq_response.status_code, groq_json)
 
-    # Parse response
     if "choices" in groq_json:
         reply = groq_json["choices"][0]["message"]["content"]
     else:
         reply = "Sorry, I couldn't generate a reply. Please try again."
 
-   
-   
-
-   
-    import uuid
-
-    # DO NOT wrap in list — just plain string
+    # === Step 2: Log to Supabase ===
     session_id = str(uuid.uuid4())
-    print("Session ID:", session_id)  # ✅ should be like: f2e4632f-99b4...
 
-    # Insert user message
     supabase.table("messages").insert({
         "user_msg": user_msg,
         "ai_reply": "",
@@ -85,7 +75,6 @@ async def whatsapp_webhook(request: Request):
         "is_error": False
     }).execute()
 
-    # Insert bot reply
     supabase.table("messages").insert({
         "user_msg": "",
         "ai_reply": reply,
@@ -95,13 +84,24 @@ async def whatsapp_webhook(request: Request):
         "is_error": False
     }).execute()
 
-   
-   
-    # Send reply to WhatsApp
+    # === Step 3: Send WhatsApp Reply ===
     twilio_client.messages.create(
         body=reply,
         from_=twilio_from,
         to=twilio_to
-     )
+    )
 
-    return {"status": "ok"}
+    return {"status": "message sent", "session_id": session_id}
+
+
+@app.get("/logs/{session_id}")
+def get_logs(session_id: str):
+    try:
+        response = supabase.table("messages") \
+                           .select("*") \
+                           .eq("session_id", session_id) \
+                           .order("id", desc=False) \
+                           .execute()
+        return {"messages": response.data}
+    except Exception as e:
+        return {"error": str(e)}
