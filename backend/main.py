@@ -69,25 +69,32 @@ async def whatsapp_webhook(request: Request):
    
 
    
+    import uuid
+
+    # DO NOT wrap in list — just plain string
+    session_id = str(uuid.uuid4())
+    print("Session ID:", session_id)  # ✅ should be like: f2e4632f-99b4...
+
+    # Insert user message
     supabase.table("messages").insert({
-        
         "user_msg": user_msg,
-        "ai_reply":"",
+        "ai_reply": "",
         "message_type": "user",
         "session_id": session_id,
         "status": "sent",
         "is_error": False
-     }).execute()
-    
+    }).execute()
+
+    # Insert bot reply
     supabase.table("messages").insert({
-        
         "user_msg": "",
-        "ai_reply":reply,
+        "ai_reply": reply,
         "message_type": "bot",
         "session_id": session_id,
         "status": "sent",
         "is_error": False
-     }).execute()
+    }).execute()
+
    
    
     # Send reply to WhatsApp
